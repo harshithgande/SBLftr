@@ -2,7 +2,7 @@ import { MuscleCategory, WorkoutDefinition, SplitPreset, ScienceCard } from './t
 
 export const EXERCISES: Record<MuscleCategory, string[]> = {
   Shoulders: [
-    'Cable Lateral Raises', 'Dumbbell Lateral Raises', 'Smith Shoulder Press',
+    'Dumbbell Lateral Raises', 'Cable Lateral Raises', 'Smith Shoulder Press',
     'Machine Shoulder Press', 'Rear Delt Fly', 'Face Pulls', 'Arnold Press',
   ],
   Chest: [
@@ -10,7 +10,7 @@ export const EXERCISES: Record<MuscleCategory, string[]> = {
     'Cable Crossover', 'Machine Chest Press', 'Incline Dumbbell Press',
   ],
   Triceps: [
-    'Single Arm Tricep Extension', 'V-Bar Tricep Pushdown', 'JM Press',
+    'Single Arm Tricep Extension', 'JM Press', 'V-Bar Tricep Pushdown',
     'Skullcrushers', 'Overhead Cable Extension', 'Rope Pushdown', 'Dips',
   ],
   Biceps: [
@@ -18,13 +18,15 @@ export const EXERCISES: Record<MuscleCategory, string[]> = {
     'Hammer Curl', 'Barbell Curl', 'Concentration Curl', 'Spider Curl',
   ],
   Back: [
-    'Lat Pulldown', 'T-Bar Rows', 'Single Arm Cable Lat Row', 'Seated Cable Row',
-    'Pull-Ups', 'Chest Supported Row', 'Straight Arm Pulldown',
+    'Lat Pulldown', 'Kelso Shrugs', 'High to Low Close Grip Pulldown',
+    'Close Grip Chest Supported Row', 'Chest Supported Row',
+    'T-Bar Rows', 'Single Arm Cable Lat Row', 'Seated Cable Row',
+    'Pull-Ups', 'Straight Arm Pulldown',
   ],
   'Lower Back': ['Back Extension', 'Reverse Hyperextension', 'Good Mornings'],
   Quads: [
-    'Leg Extension', 'Hack Squat', 'Leg Press', 'Barbell Squat',
-    'Bulgarian Split Squat', 'Pendulum Squat',
+    'Leg Extension', 'Leg Press', 'Hip Abduction',
+    'Hack Squat', 'Barbell Squat', 'Bulgarian Split Squat', 'Pendulum Squat',
   ],
   Hamstrings: ['Leg Curl', 'SLDL', 'Romanian Deadlift', 'Seated Leg Curl', 'Nordic Curl'],
   Calves: ['Calf Raises', 'Seated Calf Raise', 'Leg Press Calf Raise'],
@@ -38,68 +40,97 @@ export function getExerciseCategory(name: string): MuscleCategory | null {
   return null;
 }
 
+// Shared lower body exercise list (used by both 'legs' and 'lower' workouts)
+const LOWER_EXERCISES: WorkoutDefinition['exercises'] = [
+  { n: 'Leg Extension',  c: 'Quads' },
+  { n: 'Leg Curl',       c: 'Hamstrings' },
+  { n: 'Leg Press',      c: 'Quads' },
+  { n: 'SLDL',           c: 'Hamstrings' },
+  { n: 'Calf Raises',    c: 'Calves' },
+  { n: 'Hip Abduction',  c: 'Quads' },
+  { n: 'Crunch Machine', c: 'Abs' },
+];
+
+const UPPER_EXERCISES: WorkoutDefinition['exercises'] = [
+  { n: 'Chest Fly',                       c: 'Chest' },
+  { n: 'Dumbbell Lateral Raises',         c: 'Shoulders' },
+  { n: 'Incline Curl',                    c: 'Biceps' },
+  { n: 'Single Arm Tricep Extension',     c: 'Triceps' },
+  { n: 'Lat Pulldown',                    c: 'Back' },
+  { n: 'Incline Smith Bench',             c: 'Chest' },
+  { n: 'Preacher Curl',                   c: 'Biceps' },
+  { n: 'Smith Shoulder Press',            c: 'Shoulders' },
+  { n: 'Kelso Shrugs',                    c: 'Back' },
+  { n: 'JM Press',                        c: 'Triceps' },
+  { n: 'High to Low Close Grip Pulldown', c: 'Back' },
+  { n: 'Cuffed Cable Reverse Curl',       c: 'Biceps' },
+];
+
 export const BUILT_IN_WORKOUTS: Record<string, WorkoutDefinition> = {
   push: {
     name: 'Push',
     exercises: [
-      { n: 'Cable Lateral Raises', c: 'Shoulders' },
-      { n: 'Chest Fly', c: 'Chest' },
+      { n: 'Chest Fly',                   c: 'Chest' },
+      { n: 'Dumbbell Lateral Raises',     c: 'Shoulders' },
       { n: 'Single Arm Tricep Extension', c: 'Triceps' },
-      { n: 'Incline Smith Bench', c: 'Chest' },
-      { n: 'Smith Shoulder Press', c: 'Shoulders' },
-      { n: 'JM Press', c: 'Triceps' },
+      { n: 'Incline Smith Bench',         c: 'Chest' },
+      { n: 'JM Press',                    c: 'Triceps' },
+      { n: 'Smith Shoulder Press',        c: 'Shoulders' },
     ],
   },
   pull: {
     name: 'Pull',
     exercises: [
-      { n: 'Incline Curl', c: 'Biceps' },
-      { n: 'Lat Pulldown', c: 'Back' },
-      { n: 'Preacher Curl', c: 'Biceps' },
-      { n: 'T-Bar Rows', c: 'Back' },
-      { n: 'Cuffed Cable Reverse Curl', c: 'Biceps' },
-      { n: 'Single Arm Cable Lat Row', c: 'Back' },
-      { n: 'Back Extension', c: 'Lower Back' },
+      { n: 'Lat Pulldown',                  c: 'Back' },
+      { n: 'Incline Curl',                  c: 'Biceps' },
+      { n: 'Kelso Shrugs',                  c: 'Back' },
+      { n: 'Preacher Curl',                 c: 'Biceps' },
+      { n: 'Close Grip Chest Supported Row',c: 'Back' },
+      { n: 'Rear Delt Fly',                 c: 'Shoulders' },
     ],
   },
   legs: {
     name: 'Legs',
-    exercises: [
-      { n: 'Leg Extension', c: 'Quads' },
-      { n: 'Leg Curl', c: 'Hamstrings' },
-      { n: 'Hack Squat', c: 'Quads' },
-      { n: 'SLDL', c: 'Hamstrings' },
-      { n: 'Calf Raises', c: 'Calves' },
-      { n: 'Crunch Machine', c: 'Abs' },
-    ],
+    exercises: LOWER_EXERCISES,
   },
   upper: {
     name: 'Upper',
-    exercises: [
-      { n: 'Cable Lateral Raises', c: 'Shoulders' },
-      { n: 'Chest Fly', c: 'Chest' },
-      { n: 'V-Bar Tricep Pushdown', c: 'Triceps' },
-      { n: 'Incline Smith Bench', c: 'Chest' },
-      { n: 'Lat Pulldown', c: 'Back' },
-      { n: 'Preacher Curl', c: 'Biceps' },
-      { n: 'T-Bar Rows', c: 'Back' },
-      { n: 'Cuffed Cable Reverse Curl', c: 'Biceps' },
-    ],
+    exercises: UPPER_EXERCISES,
   },
   lower: {
     name: 'Lower',
-    exercises: [
-      { n: 'Leg Extension', c: 'Quads' },
-      { n: 'Leg Curl', c: 'Hamstrings' },
-      { n: 'Hack Squat', c: 'Quads' },
-      { n: 'SLDL', c: 'Hamstrings' },
-      { n: 'Calf Raises', c: 'Calves' },
-      { n: 'Crunch Machine', c: 'Abs' },
-    ],
+    exercises: LOWER_EXERCISES,
+  },
+  full: {
+    name: 'Full Body',
+    // Upper exercises first, then lower — do 1 set each (adjust in-workout as needed)
+    exercises: [...UPPER_EXERCISES, ...LOWER_EXERCISES],
   },
 };
 
 export const SPLIT_PRESETS: SplitPreset[] = [
+  // Science-based presets (set by onboarding)
+  {
+    id: 'fb3',
+    name: 'Full Body ×3',
+    defaultSchedule: ['full', 'rest', 'full', 'rest', 'full', 'rest', 'rest'],
+  },
+  {
+    id: 'ul-fb4',
+    name: 'Upper / Lower / Full Body ×2',
+    defaultSchedule: ['upper', 'lower', 'rest', 'full', 'rest', 'full', 'rest'],
+  },
+  {
+    id: 'ul-fb5',
+    name: 'Upper / Lower / Full Body / Upper / Lower',
+    defaultSchedule: ['upper', 'lower', 'rest', 'full', 'rest', 'upper', 'lower'],
+  },
+  {
+    id: 'ul6',
+    name: 'Upper / Lower ×3',
+    defaultSchedule: ['upper', 'lower', 'rest', 'upper', 'lower', 'upper', 'lower'],
+  },
+  // Classic presets (available in Builder)
   {
     id: 'ppl',
     name: 'Push / Pull / Legs ×2',
@@ -118,7 +149,7 @@ export const SCIENCE_CARDS: ScienceCard[] = [
     from: 'Lat Pulldown',
     to: 'Pull-Ups',
     reason: 'Pull-ups show greater lat activation and full-body integration vs machine pulldowns, especially for intermediate lifters.',
-    workoutKeys: ['pull', 'upper'],
+    workoutKeys: ['pull', 'upper', 'full'],
   },
   {
     id: 1,
@@ -132,7 +163,7 @@ export const SCIENCE_CARDS: ScienceCard[] = [
     from: 'Chest Fly',
     to: 'Cable Crossover',
     reason: 'Cable crossovers maintain constant tension through the full ROM, improving chest stretch and contraction stimulus.',
-    workoutKeys: ['push', 'upper'],
+    workoutKeys: ['push', 'upper', 'full'],
   },
   {
     id: 3,

@@ -24,6 +24,11 @@ export interface SetData {
   r: number;
   done: boolean;
   drops?: DropSet[];
+  // Unilateral (single-arm/leg) tracking
+  leftW?: number;
+  leftR?: number;
+  rightW?: number;
+  rightR?: number;
 }
 
 export interface ActiveExercise {
@@ -32,6 +37,7 @@ export interface ActiveExercise {
   custom?: boolean;
   sets: SetData[];
   supersetWith?: string;
+  unilateral?: boolean;
 }
 
 export interface ActiveWorkout {
@@ -119,6 +125,14 @@ export interface AppState {
   frequency: number | null;
   sleep: string | null;
   lifestyle: string | null;
+  physique: 'athletic' | 'aesthetic' | 'strongman' | null;
+  heightFeet: number | null;
+  heightInches: number | null;
+  weightLbs: number | null;
+  obstacles: string[];
+  onboardingPhotoUri: string | null;
+  gptPlan: string | null;
+  personalizedSplitId: string | null;
   premium: boolean;
   units: Units;
   health: boolean;
@@ -143,9 +157,23 @@ export interface AppState {
 export type Action =
   | { type: 'LOAD_STATE'; payload: AppState }
   | { type: 'SET_USER'; payload: string }
-  | { type: 'SETUP_PROFILE'; payload: { goal: string; experience: string; frequency: number; sleep: string; lifestyle: string } }
+  | { type: 'SETUP_PROFILE'; payload: {
+      physique: 'athletic' | 'aesthetic' | 'strongman';
+      experience: string;
+      frequency: number;
+      heightFeet: number;
+      heightInches: number;
+      weightLbs: number;
+      obstacles: string[];
+      onboardingPhotoUri: string | null;
+      gptPlan: string | null;
+      personalizedSplitId: string | null;
+    } }
+  | { type: 'SET_PREMIUM'; payload: boolean }
   | { type: 'INJECT_TEST_DATA'; payload: HistoryItem[] }
-  | { type: 'SET_SPLIT'; payload: { id: string; defaultSchedule: string[] } }
+  | { type: 'SET_SPLIT'; payload: { id: string; defaultSchedule: string[]; workouts?: Record<string, WorkoutDefinition> } }
+  | { type: 'TOGGLE_UNILATERAL'; payload: number }
+  | { type: 'UPDATE_UNILATERAL_SET'; payload: { ei: number; si: number; side: 'left' | 'right'; w?: number; r?: number } }
   | { type: 'SET_SCHEDULE'; payload: string[] }
   | { type: 'SET_UNITS'; payload: Units }
   | { type: 'SET_REST_DEFAULT'; payload: number }

@@ -15,6 +15,14 @@ export const DEFAULT_STATE: AppState = {
   frequency: null,
   sleep: null,
   lifestyle: null,
+  physique: null,
+  heightFeet: null,
+  heightInches: null,
+  weightLbs: null,
+  obstacles: [],
+  onboardingPhotoUri: null,
+  gptPlan: null,
+  personalizedSplitId: null,
   premium: false,
   units: 'lb',
   health: false,
@@ -48,7 +56,13 @@ function calcVolume(exercises: ActiveWorkout['exercises']): number {
   let v = 0;
   for (const ex of exercises) {
     for (const s of ex.sets) {
-      if (s.done) v += s.w * s.r;
+      if (s.done) {
+        if (ex.unilateral) {
+          v += (s.leftW ?? 0) * (s.leftR ?? 0) + (s.rightW ?? 0) * (s.rightR ?? 0);
+        } else {
+          v += s.w * s.r;
+        }
+      }
       if (s.drops) {
         for (const d of s.drops) {
           if (d.done) v += d.w * d.r;
@@ -70,12 +84,20 @@ function reducer(state: AppState, action: Action): AppState {
     case 'SETUP_PROFILE':
       return {
         ...state,
-        goal: action.payload.goal,
+        physique: action.payload.physique,
         experience: action.payload.experience,
         frequency: action.payload.frequency,
-        sleep: action.payload.sleep,
-        lifestyle: action.payload.lifestyle,
+        heightFeet: action.payload.heightFeet,
+        heightInches: action.payload.heightInches,
+        weightLbs: action.payload.weightLbs,
+        obstacles: action.payload.obstacles,
+        onboardingPhotoUri: action.payload.onboardingPhotoUri,
+        gptPlan: action.payload.gptPlan,
+        personalizedSplitId: action.payload.personalizedSplitId,
       };
+
+    case 'SET_PREMIUM':
+      return { ...state, premium: action.payload };
 
     case 'INJECT_TEST_DATA':
       return { ...state, history: action.payload };
@@ -86,8 +108,36 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         split: action.payload.id,
         schedule: action.payload.defaultSchedule,
-        workouts: preset ? BUILT_IN_WORKOUTS : state.workouts,
+        workouts: action.payload.workouts ?? (preset ? BUILT_IN_WORKOUTS : state.workouts),
       };
+    }
+
+    case 'TOGGLE_UNILATERAL': {
+      if (!state.activeWorkout) return state;
+      const ei = action.payload;
+      const exercises = state.activeWorkout.exercises.map((ex, i) =>
+        i === ei ? { ...ex, unilateral: !ex.unilateral } : ex
+      );
+      return { ...state, activeWorkout: { ...state.activeWorkout, exercises } };
+    }
+
+    case 'UPDATE_UNILATERAL_SET': {
+      if (!state.activeWorkout) return state;
+      const { ei, si, side, w, r } = action.payload;
+      const exercises = state.activeWorkout.exercises.map((ex, i) => {
+        if (i !== ei) return ex;
+        return {
+          ...ex,
+          sets: ex.sets.map((s, j) => {
+            if (j !== si) return s;
+            if (side === 'left') {
+              return { ...s, ...(w !== undefined ? { leftW: w } : {}), ...(r !== undefined ? { leftR: r } : {}) };
+            }
+            return { ...s, ...(w !== undefined ? { rightW: w } : {}), ...(r !== undefined ? { rightR: r } : {}) };
+          }),
+        };
+      });
+      return { ...state, activeWorkout: { ...state.activeWorkout, exercises } };
     }
 
     case 'SET_SCHEDULE':

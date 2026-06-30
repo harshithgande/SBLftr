@@ -9,7 +9,7 @@ import { useApp } from '../state/AppContext';
 import { C, DAY_LABELS } from '../theme';
 import { SCIENCE_CARDS } from '../data';
 import {
-  getTodayKey, getRecovery, getStreak, getWeekSessions,
+  getTodayKey, getRecovery, getStreak,
   formatDate, getEffectiveDate,
 } from '../utils';
 import { RootStackParams, MuscleCategory, GoalKey, RecoveryStatus } from '../types';
@@ -143,7 +143,6 @@ export default function TodayScreen() {
   const effectiveDate = getEffectiveDate(state.devOffset);
   const dayName = DAY_LABELS[effectiveDate.getDay()];
   const streak = getStreak(state.history, state.devOffset);
-  const weekSessions = getWeekSessions(state.history, state.devOffset);
   const goals = state.goals;
 
   const science = !state.scienceDismissed && state.scienceIdx < SCIENCE_CARDS.length
@@ -229,22 +228,28 @@ export default function TodayScreen() {
           </View>
         )}
 
-        {/* ── Compact header ── */}
+        {/* ── Header ── */}
         <View style={s.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.greeting}>Hey, {state.user} 👋</Text>
-            <Text style={s.date}>{dayName} · {formatDate(effectiveDate.toISOString())}</Text>
+          <View style={s.nameRow}>
+            <Text style={s.greeting}>Hey, {state.user}</Text>
+            {streak > 0 && (
+              <View style={s.streakPill}>
+                <Text style={s.streakPillEmoji}>🔥</Text>
+                <Text style={s.streakPillNum}>{streak}</Text>
+              </View>
+            )}
           </View>
+          <Text style={s.date}>{dayName} · {formatDate(effectiveDate.toISOString())}</Text>
           <TouchableOpacity
             style={s.patchBtn}
             onPress={() => navigation.navigate('WhatsNew')}
             activeOpacity={0.8}
           >
-            <Text style={s.patchBtnText}>What's New</Text>
+            <Text style={s.patchBtnText}>What's New ›</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Today strip + stats ── */}
+        {/* ── Today strip ── */}
         <View style={s.topCard}>
           <View style={s.todayLeft}>
             <Text style={s.todayLabel}>TODAY</Text>
@@ -265,20 +270,6 @@ export default function TodayScreen() {
             ) : (
               <Text style={s.restEmoji}>🛌</Text>
             )}
-            <View style={s.miniStats}>
-              <View style={s.miniStat}>
-                <Text style={s.miniNum}>{streak}</Text>
-                <Text style={s.miniLabel}>Streak</Text>
-              </View>
-              <View style={s.miniStat}>
-                <Text style={s.miniNum}>{weekSessions}</Text>
-                <Text style={s.miniLabel}>Week</Text>
-              </View>
-              <View style={s.miniStat}>
-                <Text style={s.miniNum}>{state.history.length}</Text>
-                <Text style={s.miniLabel}>Total</Text>
-              </View>
-            </View>
           </View>
         </View>
 
@@ -390,13 +381,23 @@ const s = StyleSheet.create({
   },
   devScheduleKey: { fontSize: 12, fontWeight: '800', color: C.warning },
 
-  header: { marginBottom: 14, flexDirection: 'row', alignItems: 'flex-start' },
+  header: { marginBottom: 14 },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 },
   greeting: { fontSize: 22, fontWeight: '800', color: C.text },
-  date: { fontSize: 12, color: C.textSec, marginTop: 2 },
+  streakPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    backgroundColor: '#FF6B3520', borderRadius: 20,
+    paddingHorizontal: 9, paddingVertical: 4,
+    borderWidth: 1, borderColor: '#FF6B3550',
+  },
+  streakPillEmoji: { fontSize: 14 },
+  streakPillNum: { fontSize: 14, fontWeight: '900', color: C.accent },
+  date: { fontSize: 12, color: C.textSec, marginBottom: 8 },
   patchBtn: {
+    alignSelf: 'flex-start',
     backgroundColor: C.surface, borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: C.border, marginTop: 2,
+    borderWidth: 1, borderColor: C.border,
   },
   patchBtnText: { fontSize: 11, fontWeight: '700', color: C.textSec },
 
@@ -416,11 +417,6 @@ const s = StyleSheet.create({
   },
   startBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   restEmoji: { fontSize: 26 },
-  miniStats: { flexDirection: 'row', gap: 12 },
-  miniStat: { alignItems: 'center' },
-  miniNum: { fontSize: 18, fontWeight: '800', color: C.accent },
-  miniLabel: { fontSize: 9, color: C.textSec, fontWeight: '600', marginTop: 1 },
-
   card: {
     backgroundColor: C.surface, borderRadius: 16, padding: 16,
     marginBottom: 14, borderWidth: 1, borderColor: C.border,

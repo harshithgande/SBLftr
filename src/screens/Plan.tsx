@@ -15,8 +15,23 @@ type Nav = NativeStackNavigationProp<RootStackParams>;
 
 const WORKOUT_LABELS: Record<string, string> = {
   rest: 'Rest', push: 'Push', pull: 'Pull', legs: 'Legs',
-  upper: 'Upper', lower: 'Lower',
+  upper: 'Upper', lower: 'Lower', full: 'Full',
 };
+
+const CLASSIC_SPLIT_IDS = ['ppl', 'ul'];
+const SCIENCE_SPLIT_IDS = ['fb3', 'ul-fb4', 'ul-fb5', 'ul6'];
+
+const SPLIT_CHIP_SHORT: Record<string, string> = {
+  ppl: 'P/P/L ×2',
+  ul: 'U/L ×2',
+};
+
+function abbrevScienceSplit(schedule: string[]): string {
+  const map: Record<string, string> = {
+    upper: 'U', lower: 'L', full: 'FB', push: 'P', pull: 'Pl', legs: 'Lg',
+  };
+  return schedule.filter(k => k !== 'rest').map(k => map[k] ?? k.charAt(0).toUpperCase()).join('/');
+}
 
 function getColor(key: string): string {
   const map: Record<string, string> = {
@@ -32,7 +47,10 @@ export default function PlanScreen() {
   const [dayPicker, setDayPicker] = useState<number | null>(null);
   const [detailWorkout, setDetailWorkout] = useState<{ key: string; def: WorkoutDefinition } | null>(null);
 
-  const presets = SPLIT_PRESETS;
+  const classicPresets = SPLIT_PRESETS.filter(p => CLASSIC_SPLIT_IDS.includes(p.id));
+  const personalizedPreset = state.personalizedSplitId
+    ? SPLIT_PRESETS.find(p => p.id === state.personalizedSplitId) ?? null
+    : null;
   const science = !state.scienceDismissed && state.scienceIdx < SCIENCE_CARDS.length
     ? SCIENCE_CARDS[state.scienceIdx]
     : null;
@@ -73,7 +91,8 @@ export default function PlanScreen() {
           onPress: () => {
             dispatch({ type: 'DELETE_CUSTOM_SPLIT', payload: id });
             if (state.split === id) {
-              selectSplit('ppl', SPLIT_PRESETS[0].defaultSchedule);
+              const pplPreset = SPLIT_PRESETS.find(p => p.id === 'ppl')!;
+              selectSplit('ppl', pplPreset.defaultSchedule);
             }
           },
         },
@@ -101,7 +120,8 @@ export default function PlanScreen() {
         {/* Split selector */}
         <Text style={s.sectionLabel}>Active Split</Text>
         <View style={s.splitRow}>
-          {presets.map(p => (
+          {/* Classic splits: P/P/L ×2 and U/L ×2 */}
+          {classicPresets.map(p => (
             <TouchableOpacity
               key={p.id}
               style={[s.splitChip, state.split === p.id && s.splitChipActive]}
@@ -109,10 +129,24 @@ export default function PlanScreen() {
               activeOpacity={0.8}
             >
               <Text style={[s.splitChipText, state.split === p.id && s.splitChipTextActive]}>
-                {p.name}
+                {SPLIT_CHIP_SHORT[p.id] ?? p.name}
               </Text>
             </TouchableOpacity>
           ))}
+          {/* Personalised split — visible and tappable for all users */}
+          {personalizedPreset && (
+            <TouchableOpacity
+              style={[s.splitChip, state.split === personalizedPreset.id && s.splitChipActive, s.splitChipAI]}
+              onPress={() => selectSplit(personalizedPreset.id, personalizedPreset.defaultSchedule)}
+              activeOpacity={0.8}
+            >
+              <Text style={s.splitChipAILabel}>MY PLAN</Text>
+              <Text style={[s.splitChipText, state.split === personalizedPreset.id && s.splitChipTextActive]}>
+                {abbrevScienceSplit(personalizedPreset.defaultSchedule)}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {/* Custom splits — Pro users */}
           {state.customSplits.map(cs => (
             <TouchableOpacity
               key={cs.id}
@@ -155,9 +189,11 @@ export default function PlanScreen() {
           ))}
         </View>
 
-        {/* Workout Preview */}
+        {/* Workout Preview — only show workouts used in the active schedule */}
         <Text style={s.sectionLabel}>Workouts</Text>
-        {Object.entries(state.workouts).map(([key, def]) => (
+        {Object.entries(state.workouts).filter(([k]) =>
+          state.schedule.includes(k)
+        ).map(([key, def]) => (
           <TouchableOpacity
             key={key}
             style={s.workoutPreview}
@@ -255,7 +291,8 @@ export default function PlanScreen() {
         onRequestClose={() => setDetailWorkout(null)}
       >
         <TouchableOpacity style={s.modalBackdrop} onPress={() => setDetailWorkout(null)} activeOpacity={1}>
-          <View style={s.detailSheet}>
+          {/* Inner wrapper stops taps/scrolls from reaching the backdrop dismiss handler */}
+          <TouchableOpacity style={s.detailSheet} onPress={() => {}} activeOpacity={1}>
             <View style={s.detailHeaderRow}>
               <Text style={s.detailTitle}>{detailWorkout?.def.name}</Text>
               <TouchableOpacity onPress={() => setDetailWorkout(null)}>
@@ -265,7 +302,7 @@ export default function PlanScreen() {
             <Text style={s.detailSubtitle}>
               {state.premium ? 'Last session & PRs' : 'Exercises in this workout'}
             </Text>
-            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false} nestedScrollEnabled>
               {detailWorkout?.def.exercises.map((ex, i) => {
                 const last = state.premium ? getLastPerformance(state.history, ex.n) : null;
                 const best = state.premium ? getBestLift(state.history, ex.n) : 0;
@@ -297,7 +334,7 @@ export default function PlanScreen() {
                 </View>
               )}
             </ScrollView>
-          </View>
+          </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
     </SafeAreaView>
@@ -319,8 +356,10 @@ const s = StyleSheet.create({
   },
   splitChipCustom: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   splitChipActive: { borderColor: C.accent, backgroundColor: C.accentDim },
+  splitChipAI: { flexDirection: 'column', alignItems: 'flex-start' },
   splitChipText: { fontSize: 13, color: C.textSec, fontWeight: '600' },
-  splitChipTextActive: { color: C.accent },
+  splitChipTextActive: { color: C.accent, fontSize: 13, fontWeight: '600' },
+  splitChipAILabel: { fontSize: 9, color: C.accent, fontWeight: '800', letterSpacing: 1, marginBottom: 1 },
   chipDeleteText: { color: C.error, fontSize: 16, fontWeight: '700', lineHeight: 18 },
 
   weekGrid: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },

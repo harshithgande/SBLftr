@@ -13,11 +13,13 @@ import { SetData, MuscleCategory, Exercise } from '../types';
 const RECALL_FREE_LIMIT = 3;
 
 function SetRow({
-  setNum, set, onWeightChange, onRepsChange, onToggle, onRemove, isPRSet,
-  onAddDrop, onDropWeightChange, onDropRepsChange, onToggleDrop, premium,
+  setNum, set, unilateral, onWeightChange, onRepsChange, onToggle, onRemove, isPRSet,
+  onAddDrop, onDropWeightChange, onDropRepsChange, onToggleDrop,
+  onUnilateralChange, premium,
 }: {
   setNum: number;
   set: SetData;
+  unilateral: boolean;
   onWeightChange: (v: string) => void;
   onRepsChange: (v: string) => void;
   onToggle: () => void;
@@ -27,48 +29,108 @@ function SetRow({
   onDropWeightChange: (di: number, v: string) => void;
   onDropRepsChange: (di: number, v: string) => void;
   onToggleDrop: (di: number) => void;
+  onUnilateralChange: (side: 'left' | 'right', field: 'w' | 'r', v: string) => void;
   premium: boolean;
 }) {
   return (
     <View>
-      <View style={[sr.row, set.done && sr.rowDone]}>
-        <Text style={sr.num}>{setNum}</Text>
-        <TextInput
-          style={[sr.input, set.done && sr.inputDone]}
-          keyboardType="decimal-pad"
-          placeholder="0"
-          placeholderTextColor={C.textMut}
-          value={set.w > 0 ? String(set.w) : ''}
-          onChangeText={onWeightChange}
-          editable={!set.done}
-        />
-        <Text style={sr.x}>×</Text>
-        <TextInput
-          style={[sr.input, set.done && sr.inputDone]}
-          keyboardType="number-pad"
-          placeholder="0"
-          placeholderTextColor={C.textMut}
-          value={set.r > 0 ? String(set.r) : ''}
-          onChangeText={onRepsChange}
-          editable={!set.done}
-        />
-        <TouchableOpacity
-          style={[sr.doneBtn, set.done && sr.doneBtnActive]}
-          onPress={onToggle}
-          activeOpacity={0.8}
-        >
-          {set.done ? (
-            <Text style={sr.doneMark}>✓{isPRSet ? ' PR' : ''}</Text>
-          ) : (
-            <Text style={sr.doneEmpty}>✓</Text>
-          )}
-        </TouchableOpacity>
-        {!set.done && (
-          <TouchableOpacity onPress={onRemove} style={sr.removeBtn}>
-            <Text style={sr.removeText}>×</Text>
+      {unilateral ? (
+        // Unilateral (single-arm) layout
+        <View style={[sr.uniWrap, set.done && sr.rowDone]}>
+          <Text style={sr.num}>{setNum}</Text>
+          <View style={sr.uniSides}>
+            <View style={sr.uniSide}>
+              <Text style={sr.uniLabel}>L</Text>
+              <TextInput
+                style={[sr.uniInput, set.done && sr.inputDone]}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={C.textMut}
+                value={set.leftW && set.leftW > 0 ? String(set.leftW) : ''}
+                onChangeText={v => onUnilateralChange('left', 'w', v)}
+                editable={!set.done}
+              />
+              <Text style={sr.uniX}>×</Text>
+              <TextInput
+                style={[sr.uniInput, set.done && sr.inputDone]}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={C.textMut}
+                value={set.leftR && set.leftR > 0 ? String(set.leftR) : ''}
+                onChangeText={v => onUnilateralChange('left', 'r', v)}
+                editable={!set.done}
+              />
+            </View>
+            <View style={sr.uniDivider} />
+            <View style={sr.uniSide}>
+              <Text style={sr.uniLabel}>R</Text>
+              <TextInput
+                style={[sr.uniInput, set.done && sr.inputDone]}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={C.textMut}
+                value={set.rightW && set.rightW > 0 ? String(set.rightW) : ''}
+                onChangeText={v => onUnilateralChange('right', 'w', v)}
+                editable={!set.done}
+              />
+              <Text style={sr.uniX}>×</Text>
+              <TextInput
+                style={[sr.uniInput, set.done && sr.inputDone]}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={C.textMut}
+                value={set.rightR && set.rightR > 0 ? String(set.rightR) : ''}
+                onChangeText={v => onUnilateralChange('right', 'r', v)}
+                editable={!set.done}
+              />
+            </View>
+          </View>
+          <TouchableOpacity style={[sr.doneBtn, set.done && sr.doneBtnActive]} onPress={onToggle} activeOpacity={0.8}>
+            {set.done ? <Text style={sr.doneMark}>✓</Text> : <Text style={sr.doneEmpty}>✓</Text>}
           </TouchableOpacity>
-        )}
-      </View>
+          {!set.done && (
+            <TouchableOpacity onPress={onRemove} style={sr.removeBtn}>
+              <Text style={sr.removeText}>×</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        // Standard bilateral layout
+        <View style={[sr.row, set.done && sr.rowDone]}>
+          <Text style={sr.num}>{setNum}</Text>
+          <TextInput
+            style={[sr.input, set.done && sr.inputDone]}
+            keyboardType="decimal-pad"
+            placeholder="0"
+            placeholderTextColor={C.textMut}
+            value={set.w > 0 ? String(set.w) : ''}
+            onChangeText={onWeightChange}
+            editable={!set.done}
+          />
+          <Text style={sr.x}>×</Text>
+          <TextInput
+            style={[sr.input, set.done && sr.inputDone]}
+            keyboardType="number-pad"
+            placeholder="0"
+            placeholderTextColor={C.textMut}
+            value={set.r > 0 ? String(set.r) : ''}
+            onChangeText={onRepsChange}
+            editable={!set.done}
+          />
+          <TouchableOpacity style={[sr.doneBtn, set.done && sr.doneBtnActive]} onPress={onToggle} activeOpacity={0.8}>
+            {set.done ? (
+              <Text style={sr.doneMark}>✓{isPRSet ? ' PR' : ''}</Text>
+            ) : (
+              <Text style={sr.doneEmpty}>✓</Text>
+            )}
+          </TouchableOpacity>
+          {!set.done && (
+            <TouchableOpacity onPress={onRemove} style={sr.removeBtn}>
+              <Text style={sr.removeText}>×</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
       {/* Drop sets (premium) */}
       {premium && set.drops?.map((drop, di) => (
         <View key={di} style={[sr.dropRow, drop.done && sr.rowDone]}>
@@ -92,10 +154,7 @@ function SetRow({
             onChangeText={v => onDropRepsChange(di, v)}
             editable={!drop.done}
           />
-          <TouchableOpacity
-            style={[sr.doneBtn, drop.done && sr.doneBtnActive]}
-            onPress={() => onToggleDrop(di)}
-          >
+          <TouchableOpacity style={[sr.doneBtn, drop.done && sr.doneBtnActive]} onPress={() => onToggleDrop(di)}>
             <Text style={drop.done ? sr.doneMark : sr.doneEmpty}>✓</Text>
           </TouchableOpacity>
         </View>
@@ -245,11 +304,18 @@ export default function ActiveWorkoutScreen() {
                   <View style={s.exNameRow}>
                     <Text style={s.exName}>{ex.n}</Text>
                     {prExercise && <View style={s.prBadge}><Text style={s.prText}>PR</Text></View>}
+                    {ex.unilateral && <View style={s.uniBadge}><Text style={s.uniText}>L/R</Text></View>}
                   </View>
                   <Text style={s.exCategory}>{ex.c}</Text>
                 </View>
                 <TouchableOpacity
-                  style={s.swapBtn}
+                  style={[s.swapBtn, ex.unilateral && s.swapBtnActive]}
+                  onPress={() => dispatch({ type: 'TOGGLE_UNILATERAL', payload: ei })}
+                >
+                  <Text style={[s.swapText, ex.unilateral && { color: C.accent }]}>Single Arm</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[s.swapBtn, { marginLeft: 6 }]}
                   onPress={() => {
                     setSwapPicker(ei);
                     setSwapCategory(null);
@@ -276,13 +342,23 @@ export default function ActiveWorkoutScreen() {
               )}
 
               {/* Set header */}
-              <View style={s.setHeader}>
-                <Text style={[s.setHeaderText, { width: 24 }]}>#</Text>
-                <Text style={[s.setHeaderText, { flex: 1 }]}>Weight ({state.units})</Text>
-                <Text style={s.setHeaderX} />
-                <Text style={[s.setHeaderText, { flex: 1 }]}>Reps</Text>
-                <Text style={[s.setHeaderText, { width: 60 }]}>Done</Text>
-              </View>
+              {!ex.unilateral && (
+                <View style={s.setHeader}>
+                  <Text style={[s.setHeaderText, { width: 24 }]}>#</Text>
+                  <Text style={[s.setHeaderText, { flex: 1 }]}>Weight ({state.units})</Text>
+                  <Text style={s.setHeaderX} />
+                  <Text style={[s.setHeaderText, { flex: 1 }]}>Reps</Text>
+                  <Text style={[s.setHeaderText, { width: 60 }]}>Done</Text>
+                </View>
+              )}
+              {ex.unilateral && (
+                <View style={s.setHeader}>
+                  <Text style={[s.setHeaderText, { width: 24 }]}>#</Text>
+                  <Text style={[s.setHeaderText, { flex: 1, textAlign: 'center' }]}>Left · wt × reps</Text>
+                  <Text style={[s.setHeaderText, { flex: 1, textAlign: 'center' }]}>Right · wt × reps</Text>
+                  <Text style={[s.setHeaderText, { width: 52 }]}>Done</Text>
+                </View>
+              )}
 
               {/* Sets */}
               {ex.sets.map((set, si) => (
@@ -290,6 +366,7 @@ export default function ActiveWorkoutScreen() {
                   key={si}
                   setNum={si + 1}
                   set={set}
+                  unilateral={!!ex.unilateral}
                   isPRSet={set.done && set.w > 0 && isPR(state.history, ex.n, set.w)}
                   premium={state.premium}
                   onWeightChange={v => dispatch({ type: 'UPDATE_SET', payload: { ei, si, w: parseFloat(v) || 0 } })}
@@ -300,6 +377,13 @@ export default function ActiveWorkoutScreen() {
                   onDropWeightChange={(di, v) => dispatch({ type: 'UPDATE_DROP', payload: { ei, si, di, w: parseFloat(v) || 0 } })}
                   onDropRepsChange={(di, v) => dispatch({ type: 'UPDATE_DROP', payload: { ei, si, di, r: parseInt(v, 10) || 0 } })}
                   onToggleDrop={di => dispatch({ type: 'TOGGLE_DROP_DONE', payload: { ei, si, di } })}
+                  onUnilateralChange={(side, field, v) => {
+                    const val = parseFloat(v) || 0;
+                    dispatch({
+                      type: 'UPDATE_UNILATERAL_SET',
+                      payload: field === 'w' ? { ei, si, side, w: val } : { ei, si, side, r: val },
+                    });
+                  }}
                 />
               ))}
 
@@ -422,6 +506,14 @@ const sr = StyleSheet.create({
   dropLabel: { width: 36, fontSize: 11, color: C.warning, fontWeight: '700' },
   addDropBtn: { paddingLeft: 24, paddingVertical: 6 },
   addDropText: { color: C.warning, fontSize: 13, fontWeight: '600' },
+  // Unilateral
+  uniWrap:    { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, gap: 4 },
+  uniSides:   { flex: 1, flexDirection: 'row', alignItems: 'center' },
+  uniSide:    { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 3 },
+  uniDivider: { width: 1, height: 28, backgroundColor: C.border, marginHorizontal: 6 },
+  uniLabel:   { fontSize: 12, fontWeight: '800', color: C.accent, width: 14 },
+  uniInput:   { flex: 1, backgroundColor: C.bg, borderRadius: 6, paddingVertical: 7, paddingHorizontal: 4, color: C.text, fontSize: 13, textAlign: 'center', borderWidth: 1, borderColor: C.border },
+  uniX:       { fontSize: 11, color: C.textSec, marginHorizontal: 1 },
 });
 
 const s = StyleSheet.create({
@@ -438,9 +530,12 @@ const s = StyleSheet.create({
   elapsed: { fontSize: 12, color: C.textSec, marginTop: 2 },
   finishBtn: {
     backgroundColor: C.accent, borderRadius: 8,
-    paddingVertical: 6, paddingHorizontal: 14, width: 64, alignItems: 'center',
+    paddingVertical: 5, paddingHorizontal: 10, minWidth: 60, alignItems: 'center',
   },
-  finishText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  finishText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+  uniBadge:     { backgroundColor: '#2196F322', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 2, borderWidth: 1, borderColor: '#2196F3' },
+  uniText:      { color: '#2196F3', fontSize: 10, fontWeight: '800' },
+  swapBtnActive:{ borderColor: C.accent, backgroundColor: C.accentDim },
   scroll: { padding: 16 },
   exerciseCard: {
     backgroundColor: C.surface, borderRadius: 14,

@@ -310,7 +310,6 @@ export default function ProfileScreen() {
             value={`${state.restDefault}s`}
             onPress={() => { setTempRest(String(state.restDefault)); setRestModal(true); }}
           />
-          <ToggleRow label="Apple Health Sync" value={state.health} onToggle={() => dispatch({ type: 'TOGGLE_HEALTH' })} />
         </View>
 
         {/* Premium */}
@@ -399,9 +398,6 @@ export default function ProfileScreen() {
                 <Text style={[s.devActionText, { color: C.error }]}>Clear All History</Text>
               </TouchableOpacity>
 
-              {/* Photo analysis test */}
-              <View style={s.devDivider} />
-              <PhotoAnalysisTool />
             </>
           )}
         </View>
