@@ -4,11 +4,16 @@ import {
   TouchableOpacity, TextInput, Modal, Alert, Switch, Image,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import * as ImagePicker from 'expo-image-picker';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { useApp } from '../state/AppContext';
 import { C } from '../theme';
 import { generatePPLTestData } from '../utils';
+import { RootStackParams } from '../types';
+
+type Nav = NativeStackNavigationProp<RootStackParams>;
 
 function Row({
   label, value, onPress, badge,
@@ -271,6 +276,7 @@ const pt = StyleSheet.create({
 // ─── Main screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
   const { state, dispatch } = useApp();
+  const navigation = useNavigation<Nav>();
   const [nameModal, setNameModal] = useState(false);
   const [restModal, setRestModal] = useState(false);
   const [tempName, setTempName] = useState(state.user ?? '');
@@ -311,6 +317,24 @@ export default function ProfileScreen() {
             onPress={() => { setTempRest(String(state.restDefault)); setRestModal(true); }}
           />
         </View>
+
+        {/* Custom Plan — Premium only */}
+        {state.premium && (
+          <>
+            <Text style={s.sectionLabel}>Training Plan</Text>
+            <TouchableOpacity
+              style={s.customPlanCard}
+              onPress={() => navigation.navigate('Builder', {})}
+              activeOpacity={0.85}
+            >
+              <View style={s.customPlanLeft}>
+                <Text style={s.customPlanTitle}>Build Custom Plan</Text>
+                <Text style={s.customPlanSub}>Create a fully custom split with your own exercises and schedule</Text>
+              </View>
+              <Text style={s.customPlanArrow}>›</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
         {/* Premium */}
         <Text style={s.sectionLabel}>Subscription</Text>
@@ -522,6 +546,17 @@ const s = StyleSheet.create({
   },
   devActionText: { color: C.accent, fontWeight: '700', fontSize: 13 },
   devDivider: { height: 1, backgroundColor: C.border, marginVertical: 14 },
+
+  // Custom plan card
+  customPlanCard: {
+    backgroundColor: C.surface, borderRadius: 16,
+    padding: 16, flexDirection: 'row', alignItems: 'center',
+    borderWidth: 1, borderColor: C.border, marginBottom: 20,
+  },
+  customPlanLeft: { flex: 1 },
+  customPlanTitle: { fontSize: 16, fontWeight: '700', color: C.text, marginBottom: 4 },
+  customPlanSub: { fontSize: 13, color: C.textSec, lineHeight: 18 },
+  customPlanArrow: { fontSize: 24, color: C.textSec, marginLeft: 8 },
 
   // Shared modals
   version: { alignItems: 'center', paddingVertical: 20 },

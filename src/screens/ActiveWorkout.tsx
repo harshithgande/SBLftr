@@ -400,17 +400,6 @@ export default function ActiveWorkoutScreen() {
         <View style={{ height: timer !== null ? 120 : 60 }} />
       </ScrollView>
 
-      {/* Volume bar */}
-      <View style={s.volumeBar}>
-        <Text style={s.volumeLabel}>Volume</Text>
-        <Text style={s.volumeVal}>{aw.volume.toLocaleString()} {state.units}</Text>
-        {aw.prs.length > 0 && (
-          <View style={s.prPill}>
-            <Text style={s.prPillText}>{aw.prs.length} PR{aw.prs.length > 1 ? 's' : ''} 🏆</Text>
-          </View>
-        )}
-      </View>
-
       {/* Rest Timer */}
       {timer !== null && (
         <View style={s.timerBar}>
@@ -563,16 +552,6 @@ const s = StyleSheet.create({
   setHeaderX: { width: 20 },
   addSetBtn: { marginTop: 10, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: C.border, borderRadius: 8, borderStyle: 'dashed' },
   addSetText: { color: C.textSec, fontSize: 13, fontWeight: '600' },
-  volumeBar: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.surface,
-    paddingHorizontal: 20, paddingVertical: 10,
-    borderTopWidth: 1, borderTopColor: C.border,
-  },
-  volumeLabel: { fontSize: 12, color: C.textSec, fontWeight: '600', marginRight: 8 },
-  volumeVal: { fontSize: 16, fontWeight: '700', color: C.text, flex: 1 },
-  prPill: { backgroundColor: C.accentDim, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
-  prPillText: { color: C.accent, fontSize: 12, fontWeight: '700' },
   timerBar: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: C.card,

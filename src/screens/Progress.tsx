@@ -15,7 +15,75 @@ import { OPENAI_API_KEY } from '../constants';
 
 const SCREEN_W = Dimensions.get('window').width;
 
-// ─── GPT-4o Vision ────────────────────────────────────────────────────────────
+// ─── Analysis text parser ─────────────────────────────────────────────────────
+function parseAnalysis(raw: string): { strengths: string[]; focus: string[]; verdict: string } {
+  const clean = raw.replace(/\*\*/g, '').replace(/\*/g, '').trim();
+  function extractBullets(header: string, after: string[]): string[] {
+    const start = clean.indexOf(header);
+    if (start === -1) return [];
+    let end = clean.length;
+    for (const h of after) {
+      const pos = clean.indexOf(h, start + header.length);
+      if (pos !== -1 && pos < end) end = pos;
+    }
+    return clean.slice(start + header.length, end).trim()
+      .split('\n')
+      .filter(l => l.trim().startsWith('•') || l.trim().startsWith('-'))
+      .map(l => l.replace(/^[•\-]\s*/, '').trim())
+      .filter(Boolean);
+  }
+  const strengthsH = 'CURRENT STRENGTHS';
+  const focusH = 'WHAT TO FOCUS ON';
+  const verdictH = 'VERDICT';
+  const strengths = extractBullets(strengthsH, [focusH, verdictH]);
+  const focus     = extractBullets(focusH, [verdictH]);
+  const vStart = clean.indexOf(verdictH);
+  const verdict = vStart !== -1 ? clean.slice(vStart + verdictH.length).trim().replace(/^[\n\r]+/, '') : '';
+  return { strengths, focus, verdict };
+}
+
+// ─── T-chart component ────────────────────────────────────────────────────────
+function AnalysisTChart({ strengths, focus }: { strengths: string[]; focus: string[] }) {
+  return (
+    <View style={at.wrap}>
+      <View style={at.col}>
+        <View style={[at.hdr, { backgroundColor: '#4CAF5018', borderColor: '#4CAF50' }]}>
+          <Text style={[at.hdrText, { color: '#4CAF50' }]}>✅  Strong</Text>
+        </View>
+        {strengths.map((s, i) => (
+          <View key={i} style={at.row}>
+            <View style={[at.dot, { backgroundColor: '#4CAF50' }]} />
+            <Text style={at.cell}>{s}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={at.divider} />
+      <View style={at.col}>
+        <View style={[at.hdr, { backgroundColor: '#FF6B3518', borderColor: C.accent }]}>
+          <Text style={[at.hdrText, { color: C.accent }]}>🎯  Focus</Text>
+        </View>
+        {focus.map((f, i) => (
+          <View key={i} style={at.row}>
+            <View style={[at.dot, { backgroundColor: C.accent }]} />
+            <Text style={at.cell}>{f}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+const at = StyleSheet.create({
+  wrap:    { flexDirection: 'row', gap: 8 },
+  col:     { flex: 1 },
+  hdr:     { borderRadius: 8, paddingVertical: 6, paddingHorizontal: 8, marginBottom: 10, borderWidth: 1, alignItems: 'center' },
+  hdrText: { fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  divider: { width: 1, backgroundColor: '#333', marginHorizontal: 2, marginTop: 38 },
+  row:     { flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginBottom: 8 },
+  dot:     { width: 6, height: 6, borderRadius: 3, marginTop: 5, flexShrink: 0 },
+  cell:    { fontSize: 13, color: '#DDDDDD', lineHeight: 18, flex: 1 },
+});
+
+// ─── AI Vision ────────────────────────────────────────────────────────────────
 async function uriToBase64(uri: string): Promise<string> {
   return readAsStringAsync(uri, { encoding: EncodingType.Base64 });
 }
@@ -249,7 +317,7 @@ function PhotoComparison() {
         <View style={pc.resultBackdrop}>
           <TouchableOpacity style={pc.resultSheet} onPress={() => {}} activeOpacity={1}>
             <View style={pc.resultHeader}>
-              <Text style={pc.resultTitle}>AI Analysis</Text>
+              <Text style={pc.resultTitle}>Body Analysis</Text>
               <TouchableOpacity onPress={() => setShowResult(false)}>
                 <Text style={pc.resultClose}>Done</Text>
               </TouchableOpacity>
@@ -260,7 +328,19 @@ function PhotoComparison() {
               {afterUri && <Image source={{ uri: afterUri }} style={pc.resultThumb} />}
             </View>
             <ScrollView showsVerticalScrollIndicator={false} nestedScrollEnabled>
-              <Text style={pc.resultText}>{result}</Text>
+              {result ? (() => {
+                const parsed = parseAnalysis(result);
+                return (
+                  <View>
+                    <AnalysisTChart strengths={parsed.strengths} focus={parsed.focus} />
+                    {parsed.verdict ? (
+                      <View style={pc.verdictBox}>
+                        <Text style={pc.verdictText}>{parsed.verdict}</Text>
+                      </View>
+                    ) : null}
+                  </View>
+                );
+              })() : null}
             </ScrollView>
           </TouchableOpacity>
         </View>
@@ -301,7 +381,11 @@ const pc = StyleSheet.create({
   resultPhotoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
   resultThumb: { flex: 1, height: 140, borderRadius: 10, resizeMode: 'cover' },
   resultArrow: { fontSize: 20, color: C.textSec },
-  resultText: { fontSize: 14, color: C.text, lineHeight: 22 },
+  verdictBox: {
+    marginTop: 16, padding: 12, backgroundColor: '#ffffff0A',
+    borderRadius: 10, borderWidth: 1, borderColor: C.border,
+  },
+  verdictText: { fontSize: 13, color: C.textSec, lineHeight: 20, fontStyle: 'italic' },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────
@@ -389,7 +473,7 @@ export default function ProgressScreen() {
         {state.premium ? (
           <View style={s.analysisCard}>
             <Text style={s.analysisHint}>
-              Upload a Before and After photo. GPT-4o will identify your current strengths and what to focus on.
+              Upload a Before and After photo. AI will identify your current strengths and exactly what to focus on.
             </Text>
             <PhotoComparison />
           </View>

@@ -118,17 +118,27 @@ const PHYSIQUE_PRIORITY: Record<Physique, Record<string, string[]>> = {
 
 function applyPhysiqueToWorkouts(physique: Physique): Record<string, WorkoutDefinition> {
   const priorities = PHYSIQUE_PRIORITY[physique];
-  function reorder(exs: Exercise[], order: string[]): Exercise[] {
-    const prioritised = order.map(n => exs.find(e => e.n === n)).filter(Boolean) as Exercise[];
-    const rest = exs.filter(e => !order.includes(e.n));
-    return [...prioritised, ...rest];
-  }
   const result = { ...BUILT_IN_WORKOUTS };
-  for (const key of ['push', 'pull', 'upper', 'lower', 'full'] as const) {
-    if (result[key] && priorities[key]) {
-      result[key] = { ...result[key], exercises: reorder(result[key].exercises, priorities[key]) };
-    }
+
+  // push / pull / full: priority list defines desired order (weakest-first)
+  for (const key of ['push', 'pull', 'full'] as const) {
+    if (!result[key] || !priorities[key]) continue;
+    const order = priorities[key];
+    const ordered = order.map(n => result[key].exercises.find(e => e.n === n)).filter(Boolean) as Exercise[];
+    const rest    = result[key].exercises.filter(e => !order.includes(e.n));
+    result[key]   = { ...result[key], exercises: [...ordered, ...rest] };
   }
+
+  // upper / lower: priority list = STRONG exercises (go LAST).
+  // Non-priority = weak/focus exercises (go FIRST — worked on when freshest).
+  for (const key of ['upper', 'lower'] as const) {
+    if (!result[key] || !priorities[key]) continue;
+    const strongList = priorities[key];
+    const weak   = result[key].exercises.filter(e => !strongList.includes(e.n));
+    const strong = result[key].exercises.filter(e =>  strongList.includes(e.n));
+    result[key]  = { ...result[key], exercises: [...weak, ...strong] };
+  }
+
   return result;
 }
 
@@ -332,6 +342,48 @@ const ph = StyleSheet.create({
   emptyLabel:{ fontSize: 13, color: C.textSec, fontWeight: '700' },
   hint:      { fontSize: 11, color: C.textMut, textAlign: 'center', marginBottom: 4 },
   remove:    { fontSize: 11, color: C.error },
+});
+
+function TChart({ strengths, focusAreas, color }: {
+  strengths: string[]; focusAreas: string[]; color: string;
+}) {
+  return (
+    <View style={tc.wrap}>
+      <View style={tc.col}>
+        <View style={[tc.colHdr, { backgroundColor: '#4CAF5018', borderColor: '#4CAF50' }]}>
+          <Text style={[tc.colHdrText, { color: '#4CAF50' }]}>✅  Strong</Text>
+        </View>
+        {strengths.map((s, i) => (
+          <View key={i} style={tc.row}>
+            <View style={[tc.dot, { backgroundColor: '#4CAF50' }]} />
+            <Text style={tc.cell}>{s}</Text>
+          </View>
+        ))}
+      </View>
+      <View style={tc.divider} />
+      <View style={tc.col}>
+        <View style={[tc.colHdr, { backgroundColor: color + '18', borderColor: color }]}>
+          <Text style={[tc.colHdrText, { color }]}>🎯  Focus</Text>
+        </View>
+        {focusAreas.map((f, i) => (
+          <View key={i} style={tc.row}>
+            <View style={[tc.dot, { backgroundColor: color }]} />
+            <Text style={tc.cell}>{f}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+const tc = StyleSheet.create({
+  wrap:       { flexDirection: 'row', gap: 8, marginTop: 8 },
+  col:        { flex: 1 },
+  colHdr:     { borderRadius: 8, paddingVertical: 5, paddingHorizontal: 8, marginBottom: 8, borderWidth: 1, alignItems: 'center' },
+  colHdrText: { fontSize: 11, fontWeight: '800', letterSpacing: 0.5 },
+  divider:    { width: 1, backgroundColor: C.border, marginHorizontal: 4, marginTop: 36 },
+  row:        { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginBottom: 6 },
+  dot:        { width: 6, height: 6, borderRadius: 3, marginTop: 5, flexShrink: 0 },
+  cell:       { fontSize: 12, color: C.text, lineHeight: 17, flex: 1 },
 });
 
 function PlanSection({ icon, title, children }: { icon: string; title: string; children: React.ReactNode }) {
@@ -656,7 +708,7 @@ export default function OnboardingScreen() {
           {step === STEP_PHOTO && (
             <View>
               <Text style={s.title}>Progress photos</Text>
-              <Text style={s.sub}>Optional — GPT uses both to give specific body composition feedback.</Text>
+              <Text style={s.sub}>Optional — AI uses both photos to give specific body composition feedback.</Text>
 
               <View style={s.instrCard}>
                 <Text style={s.instrTitle}>How to take your photos</Text>
@@ -702,7 +754,7 @@ export default function OnboardingScreen() {
               <ActivityIndicator color={C.accent} size="large" style={{ marginVertical: 28 }} />
               <Text style={s.loadingMsg}>{loadingMsgs[loadMsgIdx]}</Text>
               <Text style={s.loadingHint}>
-                GPT-4o{(frontUri || backUri) ? ' (with your photos)' : ''} is building your plan…
+                {(frontUri || backUri) ? 'Analysing your photos…' : 'Building your personalised plan…'}
               </Text>
             </View>
           )}
@@ -744,22 +796,21 @@ export default function OnboardingScreen() {
                         </PlanSection>
                       ) : null}
 
-                      {parsed.strengths.length > 0 && (
-                        <PlanSection icon="✅" title="Current strengths">
-                          {parsed.strengths.map((str, i) => (
-                            <View key={i} style={s.priorityRow}>
-                              <View style={[s.priorityDot, { backgroundColor: '#4CAF50' }]} />
-                              <View style={{ flex: 1 }}>
-                                <Text style={s.priorityMuscle}>{str}</Text>
-                              </View>
-                            </View>
-                          ))}
+                      {(parsed.strengths.length > 0 || parsed.priorities.length > 0) && (
+                        <PlanSection icon="📊" title="Your physique breakdown">
+                          <TChart
+                            strengths={parsed.strengths}
+                            focusAreas={parsed.priorities.map(p => {
+                              const dash = p.indexOf('—');
+                              return dash > -1 ? p.slice(0, dash).trim() : p;
+                            })}
+                            color={physiqueColor}
+                          />
                         </PlanSection>
                       )}
 
-                      {(scienceSchedule.length > 0 || parsed.priorities.length > 0) ? (
-                        <PlanSection icon="💪" title="What to focus on">
-                          {/* Schedule chips first */}
+                      {scienceSchedule.length > 0 && (
+                        <PlanSection icon="📅" title="Your split">
                           <View style={s.scheduleChips}>
                             {scienceSchedule.map((key, i) => (
                               <View key={i} style={[s.schedChip, key === 'rest' && s.schedChipRest]}>
@@ -769,27 +820,8 @@ export default function OnboardingScreen() {
                               </View>
                             ))}
                           </View>
-                          {/* Focus areas below */}
-                          {parsed.priorities.length > 0 && (
-                            <View style={{ marginTop: 10 }}>
-                              {parsed.priorities.map((p, i) => {
-                                const dashIdx = p.indexOf('—');
-                                const muscle  = dashIdx > -1 ? p.slice(0, dashIdx).trim() : p;
-                                const reason  = dashIdx > -1 ? p.slice(dashIdx + 1).trim() : '';
-                                return (
-                                  <View key={i} style={s.priorityRow}>
-                                    <View style={[s.priorityDot, { backgroundColor: physiqueColor }]} />
-                                    <View style={{ flex: 1 }}>
-                                      <Text style={s.priorityMuscle}>{muscle}</Text>
-                                      {reason ? <Text style={s.priorityReason}>{reason}</Text> : null}
-                                    </View>
-                                  </View>
-                                );
-                              })}
-                            </View>
-                          )}
                         </PlanSection>
-                      ) : null}
+                      )}
                     </>
                   ) : planError ? (
                     <View style={[pl.card, { marginBottom: 10 }]}>
