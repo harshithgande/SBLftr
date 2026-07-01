@@ -38,24 +38,26 @@ async function callGPTVision(beforeBase64: string, afterBase64: string): Promise
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${afterBase64}`, detail: 'high' } },
             {
               type: 'text',
-              text: `These are two physique progress photos. The FIRST image is the "before" (approx. 1 month ago). The SECOND is the "after" (now).
+              text: `You are a brutally honest physique coach looking at two progress photos. The FIRST image is "before" (~1 month ago). The SECOND is "after" (now).
 
-Analyse the visible physical changes. Output exactly two sections:
+Look carefully at the actual body in the photos. Identify what is visually well-developed and what needs work. Be SPECIFIC — name exact body parts and what you see (e.g. "wide back", "rounded shoulders", "weak lower chest", "fat accumulation at the hips", "underdeveloped arms", "strong quads").
+
+Output exactly this format:
 
 CURRENT STRENGTHS
-• [What is already well-developed or looking strong]
-• [Second strength]
-• [Third strength if visible]
+• [Specific visible strength — e.g. "Wide, developed back with good lat width"]
+• [Second specific strength — e.g. "Broad shoulders with visible delt separation"]
+• [Third if visible]
 
 WHAT TO FOCUS ON
-• [Specific muscle group or area that needs more work]
-• [Second focus area]
-• [Third focus area if relevant]
+• [Specific weak area — e.g. "Arms (biceps and triceps) lack size and definition"]
+• [Second weak area — e.g. "Excess body fat visible around hips and lower abdomen"]
+• [Third if relevant — e.g. "Lower chest needs more development for a full pec shape"]
 
 VERDICT
-[One sentence overall assessment — honest and direct]
+[One direct, honest sentence summarising where they are and what the priority shift should be]
 
-Plain text only. No markdown. Use • for bullets.`,
+Plain text only. No markdown. Use • for bullets. Be specific — vague compliments are useless.`,
             },
           ],
         },
@@ -145,24 +147,35 @@ function PhotoComparison() {
   const [beforeUri, setBeforeUri] = useState<string | null>(null);
   const [afterUri, setAfterUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [picking, setPicking] = useState<'before' | 'after' | null>(null);
   const [result, setResult] = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
 
+  // Pre-request permission so first tap doesn't lag
+  React.useEffect(() => {
+    ImagePicker.requestMediaLibraryPermissionsAsync();
+  }, []);
+
   async function pickPhoto(side: 'before' | 'after') {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo library access in Settings.');
-      return;
-    }
-    const res = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.6,
-    });
-    if (!res.canceled && res.assets[0]) {
-      if (side === 'before') setBeforeUri(res.assets[0].uri);
-      else setAfterUri(res.assets[0].uri);
+    setPicking(side);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Allow photo library access in Settings.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.6,
+      });
+      if (!res.canceled && res.assets[0]) {
+        if (side === 'before') setBeforeUri(res.assets[0].uri);
+        else setAfterUri(res.assets[0].uri);
+      }
+    } finally {
+      setPicking(null);
     }
   }
 
@@ -188,23 +201,33 @@ function PhotoComparison() {
   return (
     <View style={pc.wrap}>
       <View style={pc.slotRow}>
-        {(['before', 'after'] as const).map(side => (
-          <TouchableOpacity
-            key={side}
-            style={[pc.slot, (side === 'before' ? beforeUri : afterUri) && pc.slotFilled]}
-            onPress={() => pickPhoto(side)}
-            activeOpacity={0.85}
-          >
-            {(side === 'before' ? beforeUri : afterUri) ? (
-              <Image source={{ uri: (side === 'before' ? beforeUri : afterUri)! }} style={pc.slotImg} />
-            ) : (
-              <View style={pc.slotEmpty}>
-                <Text style={pc.slotIcon}>📸</Text>
-                <Text style={pc.slotLabel}>{side === 'before' ? 'Before\n(~1 month ago)' : 'After\n(Now)'}</Text>
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
+        {(['before', 'after'] as const).map(side => {
+          const uri = side === 'before' ? beforeUri : afterUri;
+          const isPicking = picking === side;
+          return (
+            <TouchableOpacity
+              key={side}
+              style={[pc.slot, uri && pc.slotFilled, isPicking && pc.slotPicking]}
+              onPress={() => !picking && pickPhoto(side)}
+              activeOpacity={0.75}
+              disabled={!!picking}
+            >
+              {isPicking ? (
+                <View style={pc.slotEmpty}>
+                  <ActivityIndicator color={C.accent} size="small" />
+                  <Text style={[pc.slotLabel, { marginTop: 8 }]}>Opening…</Text>
+                </View>
+              ) : uri ? (
+                <Image source={{ uri }} style={pc.slotImg} />
+              ) : (
+                <View style={pc.slotEmpty}>
+                  <Text style={pc.slotIcon}>📸</Text>
+                  <Text style={pc.slotLabel}>{side === 'before' ? 'Before\n(~1 month ago)' : 'After\n(Now)'}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {(beforeUri || afterUri) && (
@@ -254,6 +277,7 @@ const pc = StyleSheet.create({
     overflow: 'hidden',
   },
   slotFilled: { borderStyle: 'solid', borderColor: C.accent },
+  slotPicking: { borderColor: C.accent, opacity: 0.7 },
   slotImg: { width: '100%', height: '100%', resizeMode: 'cover' },
   slotEmpty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6 },
   slotIcon: { fontSize: 28 },

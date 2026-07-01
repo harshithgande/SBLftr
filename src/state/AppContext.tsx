@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, Dispatch } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AppState, Action, ActiveWorkout, HistoryItem, ScienceCard, Exercise, WeightEntry } from '../types';
-import { BUILT_IN_WORKOUTS, SPLIT_PRESETS } from '../data';
+import { BUILT_IN_WORKOUTS, SPLIT_PRESETS, STRONG_EXERCISES } from '../data';
 import { isPR } from '../utils';
 
 const STORAGE_KEY = '@sblftr_state_v1';
@@ -173,21 +173,41 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, devApiKey: action.payload };
 
     case 'START_WORKOUT': {
-      const def = state.workouts[action.payload];
+      const key = action.payload;
+      const def = state.workouts[key];
       if (!def) return state;
+
+      const strongList = STRONG_EXERCISES[key] ?? [];
+      const blankSet = () => ({ w: 0, r: 0, done: false });
+
+      function defaultSets(exerciseName: string): { w: number; r: number; done: boolean }[] {
+        if (key === 'full') return [blankSet()];
+        if (key === 'push' || key === 'pull') return [blankSet(), blankSet()];
+        if (key === 'upper' || key === 'lower' || key === 'legs') {
+          const n = strongList.includes(exerciseName) ? 1 : 2;
+          return Array.from({ length: n }, blankSet);
+        }
+        // custom split or unknown — default 3
+        return [blankSet(), blankSet(), blankSet()];
+      }
+
+      // For upper / lower / legs: put 2-set (weak) exercises first, 1-set (strong) last
+      let orderedExercises = def.exercises;
+      if (key === 'upper' || key === 'lower' || key === 'legs') {
+        const weak   = orderedExercises.filter(ex => !strongList.includes(ex.n));
+        const strong = orderedExercises.filter(ex =>  strongList.includes(ex.n));
+        orderedExercises = [...weak, ...strong];
+      }
+
       const aw: ActiveWorkout = {
-        key: action.payload,
+        key,
         name: def.name,
         startTime: new Date().toISOString(),
-        exercises: def.exercises.map(ex => ({
+        exercises: orderedExercises.map(ex => ({
           n: ex.n,
           c: ex.c,
           custom: ex.custom,
-          sets: [
-            { w: 0, r: 0, done: false },
-            { w: 0, r: 0, done: false },
-            { w: 0, r: 0, done: false },
-          ],
+          sets: defaultSets(ex.n),
         })),
         volume: 0,
         prs: [],

@@ -169,13 +169,14 @@ OVERVIEW
 [One sentence: state exactly what this plan will accomplish for this specific person — tie together their physique goal, experience level, and stats. Direct, personal, motivating.]
 
 CURRENT STRENGTHS
-• [What they physically have going for them right now — inferred from body type, experience, and any photos provided — relative to their dream physique]
-• [Second strength, specific to their goal]
+${params.frontPhotoBase64 || params.backPhotoBase64
+  ? '• [What is visually well-developed in the photos — name the specific body part and what you see, e.g. "Strong, wide back with good lat flare"]\n• [Second specific strength visible in photos]'
+  : '• [What they likely have going for them based on their experience level and body type — specific to their physique goal]\n• [Second inferred strength]'}
 
 WHAT TO FOCUS ON
-• [Muscle group or area most critical to close the gap between their current physique and their dream physique] — [why]
-• [Second focus area relative to the dream physique] — [why]
-• [Third focus area] — [why]`;
+• [Most critical gap between their current physique and their dream physique — name the specific body part, e.g. "Arms need more size — biceps and triceps are underdeveloped relative to the rest of the body"]
+• [Second specific area to prioritise, e.g. "Shoulders need more lateral delt work to create width"]
+• [Third if relevant — be honest about fat distribution or lagging muscle groups]`;
 
   const content: object[] = [];
   if (params.frontPhotoBase64) {
@@ -290,13 +291,23 @@ const nb = StyleSheet.create({
   nextText:     { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
 
-function PhotoSlot({ label, hint, uri, onPress, onRemove }: {
-  label: string; hint: string; uri: string | null; onPress: () => void; onRemove: () => void;
+function PhotoSlot({ label, hint, uri, loading, onPress, onRemove }: {
+  label: string; hint: string; uri: string | null; loading?: boolean; onPress: () => void; onRemove: () => void;
 }) {
   return (
     <View style={ph.wrap}>
-      <TouchableOpacity style={[ph.slot, !!uri && ph.filled]} onPress={onPress} activeOpacity={0.85}>
-        {uri ? (
+      <TouchableOpacity
+        style={[ph.slot, !!uri && ph.filled, loading && ph.slotLoading]}
+        onPress={onPress}
+        activeOpacity={0.75}
+        disabled={loading}
+      >
+        {loading ? (
+          <View style={ph.empty}>
+            <ActivityIndicator color={C.accent} size="small" />
+            <Text style={[ph.emptyLabel, { marginTop: 8, color: C.accent }]}>Opening…</Text>
+          </View>
+        ) : uri ? (
           <Image source={{ uri }} style={ph.img} />
         ) : (
           <View style={ph.empty}>
@@ -314,6 +325,7 @@ const ph = StyleSheet.create({
   wrap:      { flex: 1, alignItems: 'center' },
   slot:      { width: '100%', aspectRatio: 3 / 4, borderRadius: 14, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.border, overflow: 'hidden', marginBottom: 6 },
   filled:    { borderStyle: 'solid', borderColor: C.accent },
+  slotLoading: { borderStyle: 'solid', borderColor: C.accent, opacity: 0.7 },
   img:       { width: '100%', height: '100%', resizeMode: 'cover' },
   empty:     { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 },
   emptyIcon: { fontSize: 28 },
@@ -358,6 +370,7 @@ export default function OnboardingScreen() {
   const [planText, setPlanText]     = useState('');
   const [planError, setPlanError]   = useState(false);
   const [paywallStage, setPaywallStage] = useState<PaywallStage>('pro');
+  const [pickingSide, setPickingSide]   = useState<'front' | 'back' | null>(null);
   const [paywallPhase, setPaywallPhase] = useState<PaywallPhase>('plan');
 
   const dotAnim = useRef(new Animated.Value(0)).current;
@@ -368,6 +381,13 @@ export default function OnboardingScreen() {
     'Finalising your personalised plan…',
   ];
   const [loadMsgIdx, setLoadMsgIdx] = useState(0);
+
+  // Pre-request photo permissions so the first tap on the photo step is instant
+  useEffect(() => {
+    if (step === STEP_PHOTO - 1) {
+      ImagePicker.requestMediaLibraryPermissionsAsync();
+    }
+  }, [step]);
 
   // Trigger GPT when entering loading step
   useEffect(() => {
@@ -417,27 +437,41 @@ export default function OnboardingScreen() {
   }
 
   async function pickPhoto(side: 'front' | 'back') {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo library access in Settings.');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [3, 4],
-      quality: 0.5,
-    });
-    if (!result.canceled && result.assets[0]) {
-      if (side === 'front') setFrontUri(result.assets[0].uri);
-      else setBackUri(result.assets[0].uri);
+    setPickingSide(side);
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Allow photo library access in Settings.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [3, 4],
+        quality: 0.5,
+      });
+      if (!result.canceled && result.assets[0]) {
+        if (side === 'front') setFrontUri(result.assets[0].uri);
+        else setBackUri(result.assets[0].uri);
+      }
+    } finally {
+      setPickingSide(null);
     }
   }
 
   function finishOnboarding(premium: boolean) {
-    const splitId  = getSplitIdForDays(days!);
-    const preset   = SPLIT_PRESETS.find(sp => sp.id === splitId)!;
     const workouts = applyPhysiqueToWorkouts(physique!);
+
+    let preset;
+    if (premium) {
+      // Pro users get their science-based personalized split
+      const scienceId = getSplitIdForDays(days!);
+      preset = SPLIT_PRESETS.find(sp => sp.id === scienceId)!;
+    } else {
+      // Free users get PPL ×2 (5+ days) or UL ×2 (≤4 days) — no personalized split
+      const classicId = (days ?? 3) >= 5 ? 'ppl' : 'ul';
+      preset = SPLIT_PRESETS.find(sp => sp.id === classicId)!;
+    }
 
     dispatch({ type: 'SET_USER', payload: name.trim() });
     dispatch({
@@ -452,7 +486,7 @@ export default function OnboardingScreen() {
         obstacles,
         onboardingPhotoUri: frontUri,
         gptPlan: planText || null,
-        personalizedSplitId: preset.id,
+        personalizedSplitId: premium ? preset.id : null,
       },
     });
     dispatch({ type: 'SET_SPLIT', payload: { id: preset.id, defaultSchedule: preset.defaultSchedule, workouts } });
@@ -646,9 +680,9 @@ export default function OnboardingScreen() {
               </View>
 
               <View style={s.photoSlots}>
-                <PhotoSlot label="Front" hint="Facing camera" uri={frontUri} onPress={() => pickPhoto('front')} onRemove={() => setFrontUri(null)} />
+                <PhotoSlot label="Front" hint="Facing camera" uri={frontUri} loading={pickingSide === 'front'} onPress={() => !pickingSide && pickPhoto('front')} onRemove={() => setFrontUri(null)} />
                 <View style={{ width: 12 }} />
-                <PhotoSlot label="Back" hint="Rear double bicep" uri={backUri} onPress={() => pickPhoto('back')} onRemove={() => setBackUri(null)} />
+                <PhotoSlot label="Back" hint="Rear double bicep" uri={backUri} loading={pickingSide === 'back'} onPress={() => !pickingSide && pickPhoto('back')} onRemove={() => setBackUri(null)} />
               </View>
 
               <NavRow

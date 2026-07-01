@@ -232,12 +232,10 @@ export default function TodayScreen() {
         <View style={s.header}>
           <View style={s.nameRow}>
             <Text style={s.greeting}>Hey, {state.user}</Text>
-            {streak > 0 && (
-              <View style={s.streakPill}>
-                <Text style={s.streakPillEmoji}>🔥</Text>
-                <Text style={s.streakPillNum}>{streak}</Text>
-              </View>
-            )}
+            <View style={[s.streakPill, streak === 0 && s.streakPillZero]}>
+              <Text style={s.streakPillEmoji}>{streak > 0 ? '🔥' : '⚡'}</Text>
+              <Text style={[s.streakPillNum, streak === 0 && s.streakPillNumZero]}>{streak}</Text>
+            </View>
           </View>
           <Text style={s.date}>{dayName} · {formatDate(effectiveDate.toISOString())}</Text>
           <TouchableOpacity
@@ -390,8 +388,10 @@ const s = StyleSheet.create({
     paddingHorizontal: 9, paddingVertical: 4,
     borderWidth: 1, borderColor: '#FF6B3550',
   },
+  streakPillZero: { backgroundColor: '#ffffff10', borderColor: '#ffffff20' },
   streakPillEmoji: { fontSize: 14 },
   streakPillNum: { fontSize: 14, fontWeight: '900', color: C.accent },
+  streakPillNumZero: { color: C.textSec },
   date: { fontSize: 12, color: C.textSec, marginBottom: 8 },
   patchBtn: {
     alignSelf: 'flex-start',

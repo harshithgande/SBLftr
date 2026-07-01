@@ -108,6 +108,22 @@ export const BUILT_IN_WORKOUTS: Record<string, WorkoutDefinition> = {
   },
 };
 
+// Exercises already well-developed → 1 set only (upper & lower).
+// All other exercises in those workouts → 2 sets.
+// push / pull / legs → 2 sets flat. full → 1 set flat.
+export const STRONG_EXERCISES: Partial<Record<string, string[]>> = {
+  upper: [
+    'Lat Pulldown', 'Kelso Shrugs', 'Incline Smith Bench',
+    'Smith Shoulder Press', 'High to Low Close Grip Pulldown', 'Preacher Curl',
+  ],
+  lower: [
+    'Leg Press', 'SLDL', 'Leg Curl', 'Leg Extension', 'Hip Abduction', 'Calf Raises',
+  ],
+  legs: [
+    'Leg Press', 'SLDL', 'Leg Curl', 'Leg Extension', 'Hip Abduction', 'Calf Raises',
+  ],
+};
+
 export const SPLIT_PRESETS: SplitPreset[] = [
   // Science-based presets (set by onboarding)
   {
