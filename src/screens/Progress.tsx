@@ -106,26 +106,25 @@ async function callGPTVision(beforeBase64: string, afterBase64: string): Promise
             { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${afterBase64}`, detail: 'high' } },
             {
               type: 'text',
-              text: `You are a brutally honest physique coach looking at two progress photos. The FIRST image is "before" (~1 month ago). The SECOND is "after" (now).
+              text: `You are a brutally honest physique coach. Study these two photos very carefully.
+IMAGE 1 = BEFORE (earlier photo)
+IMAGE 2 = AFTER (more recent — this is the current state)
 
-Look carefully at the actual body in the photos. Identify what is visually well-developed and what needs work. Be SPECIFIC — name exact body parts and what you see (e.g. "wide back", "rounded shoulders", "weak lower chest", "fat accumulation at the hips", "underdeveloped arms", "strong quads").
-
-Output exactly this format:
+Analyse IMAGE 2 only for the first two sections:
 
 CURRENT STRENGTHS
-• [Specific visible strength — e.g. "Wide, developed back with good lat width"]
-• [Second specific strength — e.g. "Broad shoulders with visible delt separation"]
-• [Third if visible]
+• [What genuinely looks developed or strong RIGHT NOW in IMAGE 2 — name the exact body part and what you observe, e.g. "Upper traps show good thickness and development"]
+• [Second actual strength visible in IMAGE 2 — if there is one. Do not invent strengths.]
 
 WHAT TO FOCUS ON
-• [Specific weak area — e.g. "Arms (biceps and triceps) lack size and definition"]
-• [Second weak area — e.g. "Excess body fat visible around hips and lower abdomen"]
-• [Third if relevant — e.g. "Lower chest needs more development for a full pec shape"]
+• [What looks underdeveloped, soft, or carries excess fat in IMAGE 2 right now — name the exact body part]
+• [Second area that clearly needs work in IMAGE 2]
+• [Third if clearly visible]
 
 VERDICT
-[One direct, honest sentence summarising where they are and what the priority shift should be]
+Compare IMAGE 1 and IMAGE 2 directly. If IMAGE 2 shows MORE body fat, LESS muscle mass, or LESS definition than IMAGE 1 — state that plainly. Do NOT default to positive language if the evidence does not support it. Call out regressions explicitly. One direct honest sentence.
 
-Plain text only. No markdown. Use • for bullets. Be specific — vague compliments are useless.`,
+Rules: Plain text only. No markdown. Use • for bullets. Name exact body parts. If you cannot distinguish meaningful differences, say so in VERDICT. Never give empty encouragement if the evidence does not support it.`,
             },
           ],
         },

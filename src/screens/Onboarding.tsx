@@ -26,7 +26,7 @@ const STEP_PAYWALL   = 8;
 const TOTAL_INPUT_STEPS = 7;
 
 type Physique = 'athletic' | 'aesthetic' | 'strongman';
-type PaywallStage = 'pro' | 'discount' | 'trial';
+type PaywallStage = 'pro' | 'trial';
 type PaywallPhase = 'plan' | 'pricing';
 
 const PHYSIQUES: { id: Physique; name: string; icon: string; sub: string; desc: string; color: string }[] = [
@@ -75,6 +75,12 @@ const OBSTACLES = [
 ];
 
 const DAY_OPTIONS = [3, 4, 5, 6];
+
+const TESTIMONIALS = [
+  { quote: "I finally understand why I'm doing each exercise. PRs almost every week since I started.", author: 'JakeFitness_22' },
+  { quote: "My weak spots are now my most noticeable muscles. The plan zeroed in on exactly what I needed.", author: 'MarcoPwrs' },
+  { quote: "Tried every app. This is the only one that actually explains the science behind the programming.", author: 'SarahLifts' },
+];
 
 // ─── Science-based split helpers ──────────────────────────────────────────────
 function getSplitIdForDays(days: number): string {
@@ -421,9 +427,11 @@ export default function OnboardingScreen() {
   const [backUri, setBackUri]       = useState<string | null>(null);
   const [planText, setPlanText]     = useState('');
   const [planError, setPlanError]   = useState(false);
-  const [paywallStage, setPaywallStage] = useState<PaywallStage>('pro');
-  const [pickingSide, setPickingSide]   = useState<'front' | 'back' | null>(null);
-  const [paywallPhase, setPaywallPhase] = useState<PaywallPhase>('plan');
+  const [paywallStage, setPaywallStage]   = useState<PaywallStage>('pro');
+  const [pickingSide, setPickingSide]     = useState<'front' | 'back' | null>(null);
+  const [paywallPhase, setPaywallPhase]   = useState<PaywallPhase>('plan');
+  const [selectedPlan, setSelectedPlan]   = useState<'yearly' | 'monthly'>('yearly');
+  const [testimonialIdx, setTestimonialIdx] = useState(0);
 
   const dotAnim = useRef(new Animated.Value(0)).current;
   const loadingMsgs = [
@@ -769,10 +777,8 @@ export default function OnboardingScreen() {
                   {paywallPhase === 'plan'
                     ? `Your plan is ready, ${name}.`
                     : paywallStage === 'pro'
-                      ? `Load it into the app, ${name}.`
-                      : paywallStage === 'discount'
-                        ? 'One more thing…'
-                        : 'Start free today.'}
+                      ? `Unlock your plan, ${name}.`
+                      : 'Start free today.'}
                 </Text>
                 {physiqueData && (
                   <View style={[s.physBadge, { backgroundColor: physiqueColor + '22', borderColor: physiqueColor }]}>
@@ -844,60 +850,86 @@ export default function OnboardingScreen() {
               {/* ── Pricing Phase ── */}
               {paywallPhase === 'pricing' && (
                 <>
-                  {/* Pro */}
+                  {/* Pro — new design */}
                   {paywallStage === 'pro' && (
-                    <View style={s.pricingCard}>
-                      <View style={s.pricingBadge}><Text style={s.pricingBadgeText}>LOAD PLAN INTO APP</Text></View>
-                      <Text style={s.pricingPrice}>$9.99<Text style={s.pricingPer}>/month</Text></Text>
-                      <Text style={s.pricingName}>SBLftr Pro</Text>
-                      {[
-                        `Your AI plan loaded immediately with ${physiqueData?.name}-optimised exercise order`,
-                        `${splitInfo?.name} built directly into your weekly schedule`,
-                        'Full performance recall for every exercise every session',
-                        'Custom split builder — any structure, any day name',
-                        'Progress photo AI analysis with monthly check-in',
-                      ].map((f, i) => (
-                        <View key={i} style={s.featureRow}>
-                          <Text style={s.featureCheck}>✓</Text>
-                          <Text style={s.featureText}>{f}</Text>
-                        </View>
-                      ))}
-                      <TouchableOpacity style={[s.ctaBtn, { backgroundColor: physiqueColor }]} onPress={() => finishOnboarding(true)} activeOpacity={0.85}>
-                        <Text style={s.ctaBtnText}>Load My Plan — $9.99/month</Text>
-                        <Text style={s.ctaBtnSub}>Cancel anytime · Stripe secured</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={s.declineBtn} onPress={() => setPaywallStage('discount')}>
-                        <Text style={s.declineBtnText}>Maybe later</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {/* Discount */}
-                  {paywallStage === 'discount' && (
-                    <View style={s.pricingCard}>
-                      <View style={[s.pricingBadge, { backgroundColor: '#4CAF5018', borderColor: '#4CAF50' }]}>
-                        <Text style={[s.pricingBadgeText, { color: '#4CAF50' }]}>LIMITED OFFER</Text>
+                    <>
+                      {/* Hero */}
+                      <View style={s.pricingHero}>
+                        <Text style={s.pricingHeroIcon}>🏋️</Text>
+                        <Text style={s.pricingHeadline}>Science-backed training,{'\n'}built for your physique.</Text>
+                        <Text style={s.pricingStars}>★★★★★</Text>
                       </View>
-                      <Text style={s.pricingPrice}>$4.99<Text style={s.pricingPer}>/month</Text></Text>
-                      <Text style={s.pricingName}>Pro — First 3 Months</Text>
-                      <Text style={s.discountNote}>Then $9.99/month. Cancel anytime.</Text>
-                      {[
-                        'Everything in Pro at half price for 90 days',
-                        'Your AI plan loaded immediately',
-                        'Cancel before month 4 and pay nothing more',
-                      ].map((f, i) => (
-                        <View key={i} style={s.featureRow}>
-                          <Text style={s.featureCheck}>✓</Text>
-                          <Text style={s.featureText}>{f}</Text>
+
+                      {/* Testimonial carousel */}
+                      <TouchableOpacity
+                        style={s.testimonialCard}
+                        onPress={() => setTestimonialIdx(i => (i + 1) % TESTIMONIALS.length)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={s.testimonialQuote}>"{TESTIMONIALS[testimonialIdx].quote}"</Text>
+                        <Text style={s.testimonialAuthor}>{TESTIMONIALS[testimonialIdx].author}</Text>
+                      </TouchableOpacity>
+                      <View style={s.dotsRow}>
+                        {TESTIMONIALS.map((_, i) => (
+                          <TouchableOpacity key={i} onPress={() => setTestimonialIdx(i)}>
+                            <View style={[s.tDot, i === testimonialIdx && s.tDotActive]} />
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+
+                      {/* Plan option — Yearly */}
+                      <TouchableOpacity
+                        style={[s.planCard, selectedPlan === 'yearly' && s.planCardSelected]}
+                        onPress={() => setSelectedPlan('yearly')}
+                        activeOpacity={0.85}
+                      >
+                        <View style={[s.planRadio, selectedPlan === 'yearly' && s.planRadioSelected]}>
+                          {selectedPlan === 'yearly' && <Text style={s.planRadioCheck}>✓</Text>}
                         </View>
-                      ))}
-                      <TouchableOpacity style={[s.ctaBtn, { backgroundColor: '#4CAF50' }]} onPress={() => finishOnboarding(true)} activeOpacity={0.85}>
-                        <Text style={s.ctaBtnText}>Get 3 Months for $4.99</Text>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[s.planName, selectedPlan === 'yearly' && { color: C.accent }]}>Yearly</Text>
+                          <Text style={s.planSub}>12 mo · $69.99</Text>
+                        </View>
+                        <Text style={[s.planPrice, selectedPlan === 'yearly' && { color: C.accent }]}>$5.83/mo</Text>
                       </TouchableOpacity>
+
+                      {/* Plan option — Monthly */}
+                      <TouchableOpacity
+                        style={[s.planCard, selectedPlan === 'monthly' && s.planCardSelected]}
+                        onPress={() => setSelectedPlan('monthly')}
+                        activeOpacity={0.85}
+                      >
+                        <View style={[s.planRadio, selectedPlan === 'monthly' && s.planRadioSelected]}>
+                          {selectedPlan === 'monthly' && <Text style={s.planRadioCheck}>✓</Text>}
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={s.planName}>Monthly</Text>
+                        </View>
+                        <Text style={s.planPrice}>$9.99/mo</Text>
+                      </TouchableOpacity>
+
+                      {/* CTA */}
+                      <TouchableOpacity
+                        style={[s.ctaBtn, { backgroundColor: C.accent, marginTop: 20 }]}
+                        onPress={() => finishOnboarding(true)}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={s.ctaBtnText}>Continue</Text>
+                      </TouchableOpacity>
+
+                      {/* Footer links */}
+                      <View style={s.paywallFooterRow}>
+                        <Text style={s.paywallFooterLink}>Restore Purchases</Text>
+                        <Text style={s.paywallFooterSep}>·</Text>
+                        <Text style={s.paywallFooterLink}>Terms</Text>
+                        <Text style={s.paywallFooterSep}>·</Text>
+                        <Text style={s.paywallFooterLink}>Privacy</Text>
+                      </View>
+
                       <TouchableOpacity style={s.declineBtn} onPress={() => setPaywallStage('trial')}>
-                        <Text style={s.declineBtnText}>No thanks</Text>
+                        <Text style={s.declineBtnText}>No thanks, start free</Text>
                       </TouchableOpacity>
-                    </View>
+                    </>
                   )}
 
                   {/* Free trial */}
@@ -930,8 +962,6 @@ export default function OnboardingScreen() {
                       </TouchableOpacity>
                     </View>
                   )}
-
-                  <Text style={s.paywallFooter}>Stripe-secured payments · Cancel anytime · No hidden fees</Text>
                 </>
               )}
 
@@ -1046,15 +1076,6 @@ const s = StyleSheet.create({
   lockedText: { fontSize: 12, color: C.accent, fontWeight: '700' },
 
   pricingCard:      { backgroundColor: C.surface, borderRadius: 18, padding: 20, marginBottom: 12, borderWidth: 1, borderColor: C.border },
-  pricingBadge:     { alignSelf: 'flex-start', backgroundColor: C.accentDim, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: C.accent, marginBottom: 12 },
-  pricingBadgeText: { fontSize: 10, color: C.accent, fontWeight: '800', letterSpacing: 0.5 },
-  pricingPrice:     { fontSize: 38, fontWeight: '800', color: C.text },
-  pricingPer:       { fontSize: 16, color: C.textSec, fontWeight: '400' },
-  pricingName:      { fontSize: 14, color: C.textSec, fontWeight: '600', marginBottom: 14 },
-  discountNote:     { fontSize: 12, color: C.textMut, marginBottom: 14 },
-  featureRow:       { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 8 },
-  featureCheck:     { fontSize: 14, color: '#4CAF50', fontWeight: '800', marginTop: 1 },
-  featureText:      { flex: 1, fontSize: 13, color: C.text, lineHeight: 18 },
   ctaBtn:           { backgroundColor: C.accent, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 16 },
   ctaBtnText:       { color: '#fff', fontSize: 16, fontWeight: '800' },
   ctaBtnSub:        { color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 3 },
@@ -1067,5 +1088,32 @@ const s = StyleSheet.create({
   proCompareTitle:  { fontSize: 12, color: C.accent, fontWeight: '800', marginBottom: 4 },
   proCompareText:   { fontSize: 12, color: C.text, lineHeight: 18 },
 
-  paywallFooter: { fontSize: 11, color: C.textMut, textAlign: 'center', marginTop: 8 },
+  // Pricing hero
+  pricingHero:      { alignItems: 'center', paddingTop: 4, marginBottom: 16 },
+  pricingHeroIcon:  { fontSize: 64, marginBottom: 10 },
+  pricingHeadline:  { fontSize: 22, fontWeight: '800', color: C.text, textAlign: 'center', lineHeight: 28, marginBottom: 8 },
+  pricingStars:     { fontSize: 20, color: '#FFD700', letterSpacing: 3, marginBottom: 4 },
+
+  // Testimonial carousel
+  testimonialCard:   { backgroundColor: C.surface, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: C.border },
+  testimonialQuote:  { fontSize: 14, color: C.text, lineHeight: 21, fontStyle: 'italic', marginBottom: 8 },
+  testimonialAuthor: { fontSize: 12, color: C.textSec, fontWeight: '700' },
+  dotsRow:   { flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 20 },
+  tDot:      { width: 7, height: 7, borderRadius: 4, backgroundColor: C.border },
+  tDotActive:{ width: 20, height: 7, borderRadius: 4, backgroundColor: C.accent },
+
+  // Plan option cards
+  planCard:         { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.surface, borderRadius: 16, padding: 16, marginBottom: 10, borderWidth: 1.5, borderColor: C.border },
+  planCardSelected: { borderColor: C.accent, backgroundColor: C.accentDim },
+  planRadio:        { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: C.textMut, alignItems: 'center', justifyContent: 'center' },
+  planRadioSelected:{ borderColor: C.accent, backgroundColor: C.accent },
+  planRadioCheck:   { color: '#fff', fontSize: 11, fontWeight: '900' },
+  planName:         { fontSize: 16, fontWeight: '700', color: C.text },
+  planSub:          { fontSize: 12, color: C.textSec, marginTop: 2 },
+  planPrice:        { fontSize: 14, fontWeight: '700', color: C.text },
+
+  // Footer links
+  paywallFooterRow:  { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, marginTop: 16, marginBottom: 4 },
+  paywallFooterLink: { fontSize: 11, color: C.textSec },
+  paywallFooterSep:  { fontSize: 11, color: C.textMut },
 });
